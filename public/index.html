@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fable OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#04050d; --deep:#0b1030; --ion:#6ee7ff; --gold:#ffc86b; --violet:#8b7bff; --flare:#ff4d8d;
+  --text:#e9ecff; --mist:#8f9ac4; --line:rgba(110,231,255,.16); --glass:rgba(110,231,255,.045);
+  --display:"Chakra Petch",ui-sans-serif,sans-serif; --body:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;
+  --tone:var(--ion);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:radial-gradient(1100px 700px at 50% 24%,var(--deep) 0%,var(--void) 62%) fixed var(--void);color:var(--text);font:15px/1.55 var(--body);overflow:hidden}
+button,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--ion);outline-offset:2px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:rgba(143,154,196,.25)}
+
+#app{display:grid;grid-template:56px 1fr/270px minmax(0,1fr) 340px;height:100vh;gap:0 18px;padding:0 18px 18px}
+header{grid-column:1/-1;display:flex;align-items:center;gap:22px}
+.mark{font:600 21px/1 var(--display);letter-spacing:.34em;background:linear-gradient(90deg,#fff,var(--tone));-webkit-background-clip:text;background-clip:text;color:transparent;transition:--tone .6s}
+.mark small{font:400 12px var(--display);letter-spacing:.12em;color:var(--mist);-webkit-text-fill-color:var(--mist);margin-left:10px}
+#clock{margin-left:auto;font:500 14px var(--display);color:var(--mist);font-variant-numeric:tabular-nums}
+.seg{display:flex;border:1px solid var(--line)}
+.seg button{padding:6px 14px;text-align:left;line-height:1.15;color:var(--mist);transition:background .2s,color .2s}
+.seg button b{display:block;font:500 13px var(--display);color:inherit}
+.seg button span{font-size:11px;opacity:.75}
+.seg button[aria-pressed=true]{background:rgba(110,231,255,.12);color:var(--text);box-shadow:inset 0 -2px 0 var(--ion)}
+.toggle{font:500 13px var(--display);color:var(--mist);padding:8px 12px;border:1px solid var(--line)}
+.toggle[aria-pressed=true]{color:var(--gold);border-color:rgba(255,200,107,.4)}
+
+.panel{position:relative;background:linear-gradient(180deg,var(--glass),rgba(110,231,255,.012));border:1px solid var(--line);padding:14px 16px;min-height:0}
+.panel::before,.panel::after{content:"";position:absolute;width:12px;height:12px;border:solid var(--ion);opacity:.8;pointer-events:none}
+.panel::before{top:-1px;left:-1px;border-width:2px 0 0 2px}
+.panel::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+h2{font:500 13px var(--display);letter-spacing:.06em;color:var(--mist);display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+h2 em{font-style:normal;color:var(--text);font-variant-numeric:tabular-nums}
+aside{display:flex;flex-direction:column;gap:18px;min-height:0}
+.scroll{overflow:auto;min-height:0}
+.row{display:block;width:100%;text-align:left;padding:7px 8px;margin:0 -8px;border-left:2px solid transparent;transition:background .15s}
+.row:hover{background:rgba(110,231,255,.07)}
+.row b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row span{display:block;font-size:12.5px;color:var(--mist);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.on{border-left-color:var(--ion);background:rgba(110,231,255,.09)}
+.row.now{border-left-color:var(--gold)}
+.row.past{opacity:.42}
+.empty{color:var(--mist);font-size:13.5px;padding:4px 0}
+
+#left .new{font:500 14px var(--display);padding:11px;border:1px solid var(--ion);color:var(--ion);width:100%;transition:background .2s}
+#left .new:hover{background:rgba(110,231,255,.12)}
+#sessions .row{display:flex;align-items:center;gap:6px}
+#sessions .row div{flex:1;min-width:0}
+#sessions .x{opacity:0;color:var(--mist);padding:2px 6px}
+#sessions .row:hover .x,#sessions .x:focus-visible{opacity:1}
+#sessions .x:hover{color:var(--flare)}
+
+main{position:relative;display:flex;flex-direction:column;min-height:0;min-width:0}
+#floor{position:absolute;inset:auto -18px 0;height:46%;pointer-events:none;perspective:420px;overflow:hidden;opacity:.5;-webkit-mask-image:linear-gradient(transparent,#000 70%);mask-image:linear-gradient(transparent,#000 70%)}
+#floor i{position:absolute;inset:-100% -60% 0;transform:rotateX(74deg);transform-origin:bottom;background:repeating-linear-gradient(90deg,rgba(110,231,255,.22) 0 1px,transparent 1px 64px),repeating-linear-gradient(0deg,rgba(110,231,255,.22) 0 1px,transparent 1px 64px);animation:drift 5s linear infinite}
+@keyframes drift{to{background-position:0 64px,0 64px}}
+#stage{position:relative;height:210px;flex:none;transition:height .7s cubic-bezier(.2,.8,.2,1);cursor:pointer}
+.fresh #stage{height:56%}
+#orb{position:absolute;inset:0;width:100%;height:100%}
+#status{position:absolute;left:0;right:0;bottom:0;text-align:center;font:500 14px var(--display);letter-spacing:.08em;color:var(--tone);text-shadow:0 0 18px var(--tone);pointer-events:none}
+#log{flex:1;overflow:auto;padding:8px 4px 16px;position:relative;scroll-behavior:smooth}
+.fresh #log{flex:0}
+.msg{max-width:780px;margin:0 auto 18px}
+.msg.user{text-align:right}
+.msg.user p{display:inline-block;text-align:left;background:rgba(139,123,255,.16);border:1px solid rgba(139,123,255,.35);padding:8px 14px;max-width:85%;white-space:pre-wrap}
+.who{font:500 12px var(--display);color:var(--mist);margin-bottom:4px;letter-spacing:.05em}
+.who i{font-style:normal;color:var(--ion)}
+.trace{font:12.5px/1.5 ui-monospace,Menlo,monospace;color:var(--mist);border-left:1px solid var(--line);padding-left:10px;margin:4px 0 8px}
+.trace div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trace div::before{content:"› ";color:var(--ion)}
+.trace img{display:block;max-width:300px;margin:6px 0;border:1px solid var(--flare);box-shadow:0 0 24px rgba(255,77,141,.25)}
+.said{color:var(--gold);font-size:16px;margin:6px 0;padding-left:26px;position:relative}
+.said::before{content:"";position:absolute;left:0;top:.35em;width:16px;height:12px;background:repeating-linear-gradient(90deg,var(--gold) 0 2px,transparent 2px 5px);-webkit-mask-image:radial-gradient(ellipse at center,#000 30%,transparent 75%);mask-image:radial-gradient(ellipse at center,#000 30%,transparent 75%)}
+.md p{margin:0 0 9px;max-width:72ch}.md ul,.md ol{margin:0 0 9px;padding-left:22px}.md h4{font:600 15px var(--display);margin:12px 0 5px}
+.md code{font:13px ui-monospace,Menlo,monospace;background:rgba(110,231,255,.09);padding:1px 5px}
+.md pre{background:rgba(0,0,0,.45);border:1px solid var(--line);padding:10px 12px;overflow:auto;margin:0 0 9px}.md pre code{background:none;padding:0}
+.md a{color:var(--ion)}
+.cursor::after{content:"";display:inline-block;width:8px;height:15px;background:var(--tone);margin-left:4px;vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+#deck{position:relative;max-width:780px;width:100%;margin:0 auto;flex:none}
+#protocols{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;justify-content:center}
+#protocols button{font-size:13.5px;padding:6px 13px;border:1px solid var(--line);color:var(--mist);background:rgba(4,5,13,.6);transition:color .2s,border-color .2s}
+#protocols button:hover{color:var(--text);border-color:var(--ion)}
+#composer{display:flex;align-items:flex-end;gap:10px;background:rgba(4,5,13,.72);backdrop-filter:blur(10px);padding:10px}
+#composer textarea{flex:1;background:none;border:0;resize:none;outline:none;max-height:160px;padding:8px 4px;font-size:15.5px}
+#composer textarea::placeholder{color:var(--mist)}
+.round{width:42px;height:42px;flex:none;display:grid;place-items:center;border:1px solid var(--line);transition:background .2s,border-color .2s}
+.round:hover{border-color:var(--ion);background:rgba(110,231,255,.1)}
+.round svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#mic.live{color:var(--void);background:var(--ion);border-color:var(--ion);box-shadow:0 0 26px var(--ion)}
+#go{color:var(--ion)}#go.stop{color:var(--flare);border-color:var(--flare)}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1a0d1c;border:1px solid var(--flare);padding:9px 16px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
+#toast.on{opacity:1}
+
+#ecg{display:block;width:100%;height:84px}
+.vitals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 12px}
+.vitals div{font-size:12px;color:var(--mist)}
+.vitals b{display:block;font:500 21px/1.1 var(--display);color:var(--text);font-variant-numeric:tabular-nums}
+.vitals u{display:block;height:2px;background:rgba(143,154,196,.2);margin-top:5px;text-decoration:none}
+.vitals u s{display:block;height:100%;background:var(--ion);transition:width .8s;box-shadow:0 0 8px var(--ion)}
+#feed{max-height:104px}
+#feed div{font-size:13px;display:flex;gap:8px;padding:3px 0;animation:in .4s}
+#feed time{color:var(--mist);font:12px var(--display);flex:none;font-variant-numeric:tabular-nums;padding-top:1px}
+#feed i{width:6px;height:6px;border-radius:50%;flex:none;margin-top:7px;background:var(--c);box-shadow:0 0 8px var(--c)}
+#feed span{overflow-wrap:anywhere}
+@keyframes in{from{opacity:0;transform:translateX(8px)}}
+
+.pick{font:500 13px var(--display);color:var(--mist);display:flex;align-items:center;gap:8px}
+select,input[type=text]{font:inherit;color:var(--text);background:rgba(4,5,13,.8);border:1px solid var(--line);padding:6px 8px;border-radius:0}
+.toggle:hover{color:var(--text)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--violet);box-shadow:0 0 8px var(--violet);margin-right:6px;animation:blink 1.2s ease-in-out infinite alternate}
+.note{text-align:center;color:var(--mist);font-size:13px;margin:0 auto 14px;max-width:780px}
+.note::before{content:"✓ ";color:var(--gold)}
+#alerts{position:relative;z-index:3;flex:none}
+.alert{display:flex;align-items:flex-start;gap:12px;background:#1f0a18;border:1px solid var(--flare);box-shadow:0 0 30px rgba(255,77,141,.25);padding:10px 14px;margin-bottom:8px}
+.alert div{flex:1;min-width:0}.alert b{display:block;color:var(--flare);font:600 14px var(--display)}
+.alert span{display:block;font-size:13px;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere;max-height:4.6em;overflow:hidden}
+.btn{font:500 13px var(--display);padding:5px 12px;border:1px solid var(--line);color:var(--mist);white-space:nowrap;transition:color .2s,border-color .2s,background .2s}
+.btn:hover{color:var(--text);border-color:var(--ion)}
+.btn.go{color:var(--void);background:var(--gold);border-color:var(--gold)}.btn.go:hover{color:var(--void);background:#ffd98f}
+.btn.no:hover{color:var(--flare);border-color:var(--flare)}
+#waitp{flex:none;max-height:38%}
+#waitp.has{border-color:rgba(255,200,107,.55)}#waitp.has::before,#waitp.has::after{border-color:var(--gold)}
+.card{padding:9px 0;border-top:1px solid var(--line)}.card:first-child{border-top:0;padding-top:0}
+.card b{display:block;font-weight:500;overflow-wrap:anywhere}
+.card .sub{display:block;font-size:12px;color:var(--mist);margin:1px 0 5px}
+.card pre{font:12.5px/1.45 var(--body);color:var(--mist);white-space:pre-wrap;overflow-wrap:anywhere;max-height:4.4em;overflow:hidden;margin-bottom:7px}
+.acts{display:flex;gap:7px;flex-wrap:wrap}
+.asks .card{border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);padding:10px 12px;margin:8px 0 10px;max-width:520px}
+#biz{flex:none}
+#biz .vitals{margin:0 0 10px}
+#bars{display:flex;align-items:flex-end;gap:4px;height:34px;margin-bottom:3px}
+#bars i{flex:1;background:var(--ion);opacity:.55;min-height:2px}#bars i:last-child{opacity:1;box-shadow:0 0 8px var(--ion)}
+.cap{font-size:11.5px;color:var(--mist);margin-bottom:8px}
+#bizList{max-height:150px}
+.skill{display:inline-flex;border:1px solid var(--line);background:rgba(4,5,13,.6);transition:border-color .2s}
+.skill:hover,.skill.on{border-color:var(--ion)}
+.skill.on{background:rgba(110,231,255,.12)}
+#protocols .skill button{border:0;background:none}
+#protocols .skill button:first-child{padding-right:6px}
+#protocols .skill button small{color:var(--violet);font-size:11.5px;margin-left:6px}
+#protocols .skill button + button{padding:6px 9px 6px 4px;opacity:.6}
+#armed{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ion);margin:0 0 6px 2px}
+#armed[hidden]{display:none}
+dialog{margin:auto;color:var(--text);background:#070a1c;border:1px solid var(--line);padding:18px 20px;width:min(720px,92vw);max-height:84vh}
+dialog[open]{display:flex;flex-direction:column;gap:10px}
+dialog::backdrop{background:rgba(2,3,10,.72);backdrop-filter:blur(3px)}
+dialog h3{font:600 16px var(--display);letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;gap:12px}
+dialog label{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:10px;font-size:13px;color:var(--mist)}
+dialog textarea{background:rgba(4,5,13,.8);border:1px solid var(--line);padding:10px;min-height:240px;resize:vertical;font-size:14.5px;line-height:1.5}
+dialog pre{font:12.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;color:var(--mist);max-height:40vh}
+dialog .acts{justify-content:flex-end}
+#logdlg{width:min(980px,94vw);height:84vh}
+#usedlg{width:min(900px,94vw)}
+#impdlg{width:min(940px,94vw)}
+#impBody{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
+#impBody p{max-width:74ch}
+.sug{display:grid;grid-template-columns:22px 1fr;gap:4px 10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.sug input{margin-top:4px;accent-color:var(--gold)}
+.sug b{font-weight:500}.sug b small{font:500 11.5px var(--display);margin-left:8px;color:var(--mist)}.sug b small.high{color:var(--flare)}.sug b small.medium{color:var(--gold)}
+.sug span{grid-column:2;font-size:13.5px;color:var(--mist)}.sug span q{color:var(--text);quotes:"“" "”"}
+#impBody pre.diff{max-height:38vh;background:rgba(0,0,0,.45);border:1px solid var(--line);padding:10px 12px}
+.warn{color:var(--gold);font-size:13.5px}.bad{color:var(--flare)}
+.spin{display:flex;align-items:center;gap:10px;color:var(--violet);font:500 14px var(--display)}
+#usedlg table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+#usedlg th{font:500 12px var(--display);color:var(--mist);text-align:right;padding:4px 8px;letter-spacing:.04em}
+#usedlg td{text-align:right;padding:5px 8px;border-top:1px solid rgba(110,231,255,.08)}
+#usedlg th:first-child,#usedlg td:first-child{text-align:left;padding-left:0}
+#usedlg tr.sess td{padding-top:14px;border-top:1px solid var(--line);font-weight:500;color:var(--text);text-align:left}
+#usedlg tr.sess td em{font-style:normal;font-weight:400;color:var(--mist);float:right}
+#usedlg tr.sum td{color:var(--gold);font-weight:500}
+#usedlg td.m{color:var(--mist)}
+#logrows{flex:1;font-size:13px}
+#logrows div{display:grid;grid-template-columns:118px 92px 1fr;gap:10px;padding:4px 0;border-bottom:1px solid rgba(110,231,255,.06)}
+#logrows time{color:var(--mist);font:12px var(--display);font-variant-numeric:tabular-nums}
+#logrows u{text-decoration:none;font:500 11.5px var(--display);color:var(--c,var(--mist))}
+#logrows span{overflow-wrap:anywhere}#logrows span em{font-style:normal;color:var(--mist)}
+#logrows .bad span{color:var(--flare)}
+.filters{display:flex;gap:6px}.filters .btn[aria-pressed=true]{color:var(--text);border-color:var(--ion);background:rgba(110,231,255,.1)}
+
+/* ---- palette: muted. One quiet accent per panel title, neutral surfaces, very little glow ---- */
+:root{--void:#0b0d12;--deep:#161b28;--ion:#8fc7d4;--gold:#d2b47e;--violet:#a09ccf;--flare:#d27d8f;--mint:#93c9b1;--sky:#93b0d6;--rose:#c99ab0;--amber:#cfae84;
+  --text:#e4e6ee;--mist:#8b90a3;--line:rgba(255,255,255,.09);--glass:rgba(255,255,255,.03)}
+body{background:radial-gradient(1100px 720px at 50% 20%,var(--deep) 0%,var(--void) 68%) fixed var(--void)}
+.mark{background-image:linear-gradient(90deg,var(--text),var(--tone));letter-spacing:.3em}
+.panel{--ac:var(--ion);border-color:var(--line);background:var(--glass)}
+.panel::before,.panel::after{border-color:var(--ac);opacity:.55;width:9px;height:9px;border-width:1px 0 0 1px}
+.panel::after{border-width:0 1px 1px 0}
+.panel>h2{color:var(--ac)}
+.panel .row:hover{background:rgba(255,255,255,.045)}
+.panel .row.on{border-left-color:var(--ac);background:rgba(255,255,255,.06)}
+.row.now{border-left-color:var(--gold)}
+#biz{--ac:var(--mint)} #left>section:nth-of-type(3){--ac:var(--amber)}
+#right>section:nth-of-type(1){--ac:var(--rose)} #waitp{--ac:var(--gold)} #right>section:nth-of-type(3){--ac:var(--violet)} #right>section:nth-of-type(4){--ac:var(--sky)}
+#waitp.has{border-color:color-mix(in srgb,var(--gold) 45%,transparent)}
+#left .new{border-color:color-mix(in srgb,var(--ion) 50%,transparent);color:var(--ion)}
+#left .new:hover{background:rgba(255,255,255,.05)}
+.seg button{--ec:var(--ion)} .seg [data-engine=claude]{--ec:var(--sky)} .seg [data-engine=fable]{--ec:var(--rose)} .seg [data-engine=codex]{--ec:var(--mint)} .seg [data-engine=auto]{--ec:var(--gold)}
+.seg button[aria-pressed=true]{background:rgba(255,255,255,.05);color:var(--text);box-shadow:inset 0 -1px 0 var(--ec)}
+.toggle[aria-pressed=true]{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 40%,transparent)}
+.vitals u s{background:var(--ac,var(--ion));box-shadow:none}
+#bars i{background:var(--mint);opacity:.35}#bars i:last-child{opacity:.9;box-shadow:none}
+#protocols .skill{background:rgba(255,255,255,.03);border-color:var(--line)}
+#protocols .skill:hover,#protocols .skill.on{border-color:color-mix(in srgb,var(--ion) 60%,transparent)}
+#protocols .skill.on{background:rgba(255,255,255,.07)}
+#protocols .skill button small{color:var(--violet)}
+#status{text-shadow:none;font-weight:400;letter-spacing:.06em}
+.msg.user p{background:rgba(160,156,207,.12);border-color:rgba(160,156,207,.28)}
+.who i{color:var(--ion)}
+.said{color:var(--gold)}
+.md code{background:rgba(255,255,255,.07)}
+.trace img{border-color:var(--line);box-shadow:none}
+#mic.live{box-shadow:none}
+#feed i{box-shadow:none}.dot{box-shadow:none}
+.alert{background:#1b1216;box-shadow:none;border-color:color-mix(in srgb,var(--flare) 60%,transparent)}
+.btn.go{background:var(--gold);border-color:var(--gold)}.btn.go:hover{background:#dfc595}
+#composer{background:rgba(11,13,18,.8)}
+#floor{opacity:.28}
+#floor i{background:repeating-linear-gradient(90deg,rgba(255,255,255,.16) 0 1px,transparent 1px 64px),repeating-linear-gradient(0deg,rgba(255,255,255,.16) 0 1px,transparent 1px 64px)}
+dialog{background:#10131b;border-color:rgba(255,255,255,.14);box-shadow:0 24px 80px rgba(0,0,0,.5)}
+select,input[type=text],dialog textarea{background:rgba(0,0,0,.25)}
+
+#app>*{animation:boot .9s .5s both}
+@keyframes boot{from{opacity:0}}
+@media (max-width:1150px){#app{grid-template-columns:230px minmax(0,1fr)}#right{display:none}}
+@media (max-width:1320px){.seg button span,.mark small{display:none}}
+@media (max-width:760px){.pick,#logbtn,#usebtn,#impbtn{display:none}#app{grid-template:auto 1fr/1fr;padding:0 16px 16px}#left{display:none}.seg button span{display:none}.mark small{display:none}}
+@media (prefers-reduced-motion:reduce){#floor i,.cursor::after{animation:none}#app>*{animation:none}#stage{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="mark">FABLE<small>your agentic OS</small></div>
+    <div id="clock"></div>
+    <div class="seg" role="group" aria-label="Model">
+      <button data-engine="auto" aria-pressed="true"><b>Auto</b><span>picks for you</span></button>
+      <button data-engine="claude" aria-pressed="false"><b>Sonnet 5.5</b><span>quick answers</span></button>
+      <button data-engine="fable" aria-pressed="false"><b>Fable 5.2</b><span>long jobs</span></button>
+      <button data-engine="codex" aria-pressed="false"><b>GPT-5.6 Luna</b><span>via Codex</span></button>
+    </div>
+    <label class="pick">Effort <select id="effort"></select></label>
+    <button class="toggle" id="impbtn">Improve</button>
+    <button class="toggle" id="usebtn">Usage</button>
+    <button class="toggle" id="logbtn">Log</button>
+    <button class="toggle" id="voice" aria-pressed="true">Voice on</button>
+  </header>
+
+  <aside id="left">
+    <button class="new" id="new">New session</button>
+    <section class="panel scroll" style="flex:1.2"><h2>Sessions</h2><div id="sessions"></div></section>
+    <section class="panel" id="biz">
+      <h2>Business</h2>
+      <div class="vitals"><div><b id="bLeads">0</b>Leads</div><div><b id="bProps">0</b>Proposals waiting</div><div><b id="bCost">$0</b>Spent today</div></div>
+      <div id="bars" role="img"></div><p class="cap" id="barcap"></p>
+      <div id="bizList" class="scroll"></div>
+    </section>
+    <section class="panel scroll" style="flex:.8"><h2>Second brain <em id="notes"></em></h2><div id="recent"></div></section>
+  </aside>
+
+  <main class="fresh" id="main">
+    <div id="floor"><i></i></div>
+    <div id="alerts"></div>
+    <div id="stage" title="Click to talk, or hold Space"><canvas id="orb"></canvas><div id="status" aria-live="polite"></div></div>
+    <div id="log"></div>
+    <div id="deck">
+      <div id="protocols"></div>
+      <div id="armed" hidden><span></span><button type="button" class="btn" id="disarm">Cancel</button></div>
+      <form id="composer" class="panel">
+        <button type="button" class="round" id="mic" aria-label="Talk"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <textarea id="input" rows="1" placeholder="Ask, hand me a long job, or tell me what to do on your Mac" aria-label="Message"></textarea>
+        <button class="round" id="go" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </div>
+  </main>
+
+  <aside id="right">
+    <section class="panel">
+      <h2>Pulse <em id="beat"></em></h2>
+      <canvas id="ecg"></canvas>
+      <div class="vitals">
+        <div><b id="vCpu">–</b>CPU<u><s id="bCpu"></s></u></div>
+        <div><b id="vMem">–</b>Memory<u><s id="bMem"></s></u></div>
+        <div><b id="vAg">0</b>Agents working<u><s id="bAg"></s></u></div>
+      </div>
+      <div id="feed" class="scroll"></div>
+    </section>
+    <section class="panel scroll" id="waitp"><h2>Waiting on you <em id="qn"></em></h2><div id="queue"></div></section>
+    <section class="panel scroll" style="flex:1"><h2>Today <em id="next"></em></h2><div id="events"></div></section>
+    <section class="panel scroll" style="flex:1"><h2>Unread <em id="unread"></em></h2><div id="mails"></div></section>
+  </aside>
+</div>
+<dialog id="apdlg">
+  <h3><span id="apTitle"></span><button class="btn" data-close>Close</button></h3>
+  <div id="apFields"></div>
+  <div class="acts"><button class="btn no" id="apNo">Discard</button><button class="btn go" id="apOk">Send</button></div>
+</dialog>
+<dialog id="cfgdlg">
+  <h3>Skill button<button class="btn" data-close>Close</button></h3>
+  <label>Skill <select id="cfgSkill"></select></label>
+  <label>Model <select id="cfgEngine"></select></label>
+  <label>Effort <select id="cfgEffort"></select></label>
+  <p class="cap" id="cfgDesc"></p>
+  <div class="acts"><button class="btn go" id="cfgSave">Save</button></div>
+</dialog>
+<dialog id="impdlg">
+  <h3>Improve Fable OS<button class="btn" data-close>Close</button></h3>
+  <div id="impBody"></div>
+  <div class="acts" id="impActs"></div>
+</dialog>
+<dialog id="usedlg">
+  <h3>Token usage<button class="btn" data-close>Close</button></h3>
+  <div class="scroll" id="userows"></div>
+  <p class="cap">Input is new input, cached is input re-read from cache, and total is all three added up. Cost is what the Claude CLI reports; Codex reports tokens only.</p>
+</dialog>
+<dialog id="logdlg">
+  <h3>Audit log<span class="filters" id="logFilters"></span><button class="btn" data-close>Close</button></h3>
+  <div id="logrows" class="scroll"></div>
+</dialog>
+<div id="toast" role="alert"></div>
+<audio id="player"></audio>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const api = (p, o) => fetch(p, o && { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) }).then(r => r.json());
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const NAMES = { auto: 'Auto', claude: 'Sonnet 5.5', fable: 'Fable 5.2', codex: 'GPT-5.6 Luna' };
+let engine = localStorage.engine || 'auto', effort = localStorage.effort || 'auto', voice = localStorage.voice !== 'off';
+let current = localStorage.session || null, busy = false, acting = false, live = null, world = null;
+let desk = { queue: [], alerts: [], business: null }, skills = [], buttons = [], armed = null, titles = {};
+const runningIds = new Set();
+const dur = ms => ms < 6e4 ? Math.round(ms / 1e3) + 's' : ms < 36e5 ? Math.round(ms / 6e4) + ' min' : (ms / 36e5).toFixed(1) + ' h';
+const usd = n => '$' + (n >= 100 ? n.toFixed(0) : n.toFixed(2));
+const num = n => n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : n.toLocaleString();
+const who = m => `<i>Fable OS</i> on ${NAMES[m.engine] || m.engine}${m.effort ? ', ' + m.effort + ' effort' : ''}${m.why ? ' (auto: ' + esc(m.why) + ')' : ''}${m.tokens ? ' · ' + num(m.tokens) + ' tokens' : ''}${m.usd != null ? ' · ' + usd(m.usd) : ''}${m.ms ? ' · ' + dur(m.ms) : ''}${m.failed ? ' · <span style="color:var(--flare)">failed</span>' : ''}`;
+
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 4200); }
+
+// ---- tiny markdown (escaped first, so model output can never inject markup) ----
+function md(src) {
+  const blocks = [];
+  src = esc(src).replace(/```\w*\n?([\s\S]*?)(```|$)/g, (_, c) => { blocks.push(`<pre><code>${c}</code></pre>`); return `\u0000${blocks.length - 1}\u0000`; })
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>').replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const out = []; let list = null, m;
+  for (const line of src.split('\n')) {
+    if (m = line.match(/^\s*([-*]|\d+\.)\s+(.*)/)) { const t = /\d/.test(m[1]) ? 'ol' : 'ul'; if (list !== t) { if (list) out.push(`</${list}>`); out.push(`<${t}>`); list = t; } out.push(`<li>${m[2]}</li>`); continue; }
+    if (list) { out.push(`</${list}>`); list = null; }
+    if (m = line.match(/^#{1,4}\s+(.*)/)) out.push(`<h4>${m[1]}</h4>`);
+    else if (/^\u0000\d+\u0000$/.test(line.trim())) out.push(line);
+    else if (line.trim()) out.push(`<p>${line}</p>`);
+  }
+  if (list) out.push(`</${list}>`);
+  return out.join('').replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[i]);
+}
+
+// ---- state → colour and label ----
+const STATES = {
+  idle: { hue: 196, label: 'Ready. Hold Space to talk', tone: '#8fc7d4' },
+  listening: { hue: 172, label: 'Listening', tone: '#93c9b1' },
+  thinking: { hue: 252, label: 'Thinking', tone: '#a09ccf' },
+  acting: { hue: 336, label: 'Working on your Mac', tone: '#d27d8f' },
+  waiting: { hue: 38, label: 'Waiting for your click', tone: '#d2b47e' },
+  speaking: { hue: 38, label: 'Speaking', tone: '#d2b47e' },
+};
+let state = 'idle';
+function refresh() {
+  state = rec ? 'listening' : !player.paused ? 'speaking' : busy ? (desk.queue.some(q => q.blocking && q.session === current) ? 'waiting' : acting ? 'acting' : 'thinking') : 'idle';
+  $('status').textContent = STATES[state].label;
+  document.documentElement.style.setProperty('--tone', STATES[state].tone);
+  $('go').classList.toggle('stop', busy); $('go').setAttribute('aria-label', busy ? 'Stop' : 'Send');
+  $('go').innerHTML = busy ? '<svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  $('mic').classList.toggle('live', !!rec);
+}
+
+// ---- audio: one context, analysers for the mic and for Fable OS's voice ----
+const player = $('player'); let AC, outAn, micAn, stream, rec = null, queue = [];
+function audio() {
+  if (AC) { AC.resume(); return; }
+  AC = new AudioContext(); outAn = AC.createAnalyser(); outAn.fftSize = 256;
+  AC.createMediaElementSource(player).connect(outAn); outAn.connect(AC.destination);
+}
+addEventListener('pointerdown', audio, { once: true }); addEventListener('keydown', audio, { once: true });
+const buf = new Uint8Array(128);
+function level() {
+  const an = rec ? micAn : !player.paused ? outAn : null; if (!an) return 0;
+  an.getByteTimeDomainData(buf); let s = 0; for (const v of buf) s += (v - 128) ** 2;
+  return Math.min(1, Math.sqrt(s / buf.length) / 40);
+}
+function playNext() { if (!player.paused || !queue.length) return refresh(); player.src = queue.shift(); player.play().catch(() => toast('Click anywhere once so I can speak')); }
+player.onplay = refresh; player.onended = playNext; player.onpause = refresh;
+function hush() { queue = []; player.pause(); }
+
+async function startRec() {
+  if (rec) return; audio(); hush();
+  try { stream ??= await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return toast('Microphone is blocked. Allow it for this page to talk.'); }
+  if (!micAn) { micAn = AC.createAnalyser(); micAn.fftSize = 256; AC.createMediaStreamSource(stream).connect(micAn); }
+  const chunks = []; rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => chunks.push(e.data);
+  rec.onstop = async () => {
+    const blob = new Blob(chunks, { type: rec.mimeType }); rec = null; busy = true; refresh();
+    const r = await fetch('/api/stt', { method: 'POST', headers: { 'content-type': blob.type }, body: blob }).then(r => r.json()).catch(e => ({ error: e.message }));
+    busy = runningIds.has(current); refresh();
+    r.text ? send(r.text) : toast(r.error || 'I did not catch that. Try again.');
+  };
+  rec.start(); refresh();
+}
+const stopRec = () => rec?.state === 'recording' && rec.stop();
+const typing = () => /TEXTAREA|INPUT/.test(document.activeElement.tagName);
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat && !typing()) { e.preventDefault(); startRec(); } });
+addEventListener('keyup', e => { if (e.code === 'Space' && rec) stopRec(); });
+const tapTalk = () => rec ? stopRec() : startRec();
+$('mic').onclick = tapTalk; $('stage').onclick = tapTalk;
+
+// ---- chat ----
+const log = $('log'), bottom = () => log.scrollTop = log.scrollHeight;
+function bubble(m) {
+  const d = document.createElement('div');
+  if (m.role === 'note') { d.className = 'note'; d.textContent = m.text; }
+  else if (m.role === 'user') { d.className = 'msg user'; d.innerHTML = `<p>${esc(m.text)}</p>`; }
+  else { d.className = 'msg assistant'; d.innerHTML = `<div class="who">${who(m)}</div><div class="trace" ${m.tools?.length ? '' : 'hidden'}>${(m.tools || []).map(t => `<div>${esc(t)}</div>`).join('')}</div><div class="saidbox">${(m.spoken || []).map(s => `<div class="said">${esc(s)}</div>`).join('')}</div><div class="md">${md(m.text || '')}</div><div class="asks"></div>`; }
+  live && m.role !== 'assistant' ? live.before(d) : log.append(d);
+  $('main').classList.remove('fresh'); bottom(); return d;
+}
+function goLive(m) { live = bubble(m); live.text = m.text || ''; live.querySelector('.md').classList.add('cursor'); }
+async function openSession(id) {
+  hush(); live = null; log.innerHTML = ''; current = id; id ? localStorage.session = id : localStorage.removeItem('session');
+  $('main').classList.add('fresh'); busy = false; acting = false;
+  if (id) {
+    const s = await api('/api/sessions/' + id); if (s.error) return openSession(null);
+    if (current !== id) return;
+    s.messages.forEach(bubble);
+    // A job still running in the background (an overnight Fable run, say) picks up where it is.
+    if (s.live) { runningIds.add(id); busy = true; goLive(s.live); drawAsks(); } else runningIds.delete(id);
+  }
+  refresh(); drawSessions();
+}
+// "Improve yourself" and close variants, typed or spoken, start the Improve workflow instead of going to an agent.
+// Only short messages that are nothing but that request count, so "improve your answer about X" still goes to chat.
+const isImprove = t => { t = t.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\b(please|hey|ok|okay|now|fable|os|noor|can you|could you|go|go ahead and|just|and|it is time to|time to|i want you to)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  return /^((self improve(ment)?)|run (a )?self improvement|((improve|upgrade|better|fix|update) (yourself|your self|your own code|your code|the os|this os))|make yourself better|start improving yourself)$/.test(t); };
+async function selfImprove() {
+  $('impdlg').open || $('impdlg').showModal();
+  if (['analysing', 'implementing', 'suggested', 'ready'].includes(imp.status)) return toast(imp.status === 'suggested' ? 'Suggestions are already waiting for you here.' : imp.status === 'ready' ? 'A set of changes is already waiting for your review here.' : 'A self-improvement pass is already running.');
+  const r = await api('/api/improve', { action: 'start' }); if (r.error) toast(r.error);
+}
+async function send(text, sk = armed) {
+  text = text.trim(); if (!text && !sk) return;
+  if (!sk && isImprove(text)) return selfImprove();
+  if (busy) return toast('Still working. Stop it first, or wait.');
+  if (!current) { current = (await api('/api/sessions', {})).id; localStorage.session = current; }
+  const id = current, name = sk && skillOf(sk.skill)?.name;
+  bubble({ role: 'user', text: sk ? `/${name}${text ? ' ' + text : ''}` : text });
+  const eng = sk ? sk.engine : engine, eff = sk && sk.effort !== 'auto' ? sk.effort : effort;
+  goLive({ role: 'assistant', engine: eng, text: '' }); const mine = live;
+  runningIds.add(id); busy = true; acting = false; disarm(); refresh();
+  const r = await api('/api/chat', { sessionId: id, text, engine: eng, effort: eff, voice, skill: sk?.skill });
+  if (r.error) { runningIds.delete(id); mine.querySelector('.md').textContent = r.error; mine.querySelector('.md').classList.remove('cursor'); if (live === mine) { live = null; busy = false; refresh(); } }
+  else mine.querySelector('.who').innerHTML = who(r);
+  drawSessions();
+}
+$('composer').onsubmit = e => {
+  e.preventDefault();
+  if (busy) return api('/api/stop', { sessionId: current });
+  send($('input').value); $('input').value = ''; $('input').style.height = '';
+};
+$('input').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('composer').requestSubmit(); } };
+$('input').oninput = e => { e.target.style.height = ''; e.target.style.height = e.target.scrollHeight + 'px'; };
+const prefill = t => { $('input').value = t; $('input').focus(); $('input').oninput({ target: $('input') }); };
+
+// ---- skill buttons: five of your own skills, each with its own model and effort ----
+const skillOf = id => skills.find(k => k.id === id);
+const opts = (el, list, val) => { el.innerHTML = list.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join(''); el.value = val; };
+const EFFORTS = [['auto', 'Default'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['xhigh', 'Extra high'], ['max', 'Max']];
+function drawSkills() {
+  $('protocols').innerHTML = buttons.map((b, i) => { const k = skillOf(b.skill); if (!k) return '';
+    const tag = [b.engine !== 'auto' && NAMES[b.engine], b.effort !== 'auto' && b.effort].filter(Boolean).join(', ');
+    return `<span class="skill ${armed === b ? 'on' : ''}"><button type="button" data-arm="${i}" title="${esc(k.description)}">${esc(k.name)}${tag ? `<small>${esc(tag)}</small>` : ''}</button><button type="button" data-cfg="${i}" aria-label="Change what this button runs">⋯</button></span>`; }).join('')
+    || '<p class="empty">No skills found in your vault.</p>';
+  $('armed').hidden = !armed;
+  if (armed) $('armed').firstElementChild.textContent = `Your next message runs ${skillOf(armed.skill).name} on ${armed.engine === 'auto' ? 'Fable 5.2' : NAMES[armed.engine]}. Say what you want from it, or just press Enter.`;
+}
+function disarm() { armed = null; drawSkills(); }
+$('disarm').onclick = disarm;
+let cfgI = 0;
+$('protocols').onclick = e => {
+  const a = e.target.closest('[data-arm]'), c = e.target.closest('[data-cfg]');
+  if (a) { armed = armed === buttons[a.dataset.arm] ? null : buttons[a.dataset.arm]; drawSkills(); $('input').focus(); }
+  if (c) {
+    cfgI = +c.dataset.cfg; const b = buttons[cfgI];
+    $('cfgSkill').innerHTML = ['vault', 'global'].map(sc => `<optgroup label="${sc === 'vault' ? 'In your vault' : 'Installed for all projects'}">${skills.filter(k => k.scope === sc).map(k => `<option value="${esc(k.id)}">${esc(k.name)}</option>`).join('')}</optgroup>`).join('');
+    $('cfgSkill').value = b.skill; $('cfgSkill').onchange = () => $('cfgDesc').textContent = skillOf($('cfgSkill').value)?.description || ''; $('cfgSkill').onchange();
+    opts($('cfgEngine'), [['auto', 'Auto (Fable 5.2 for skills)'], ['claude', 'Sonnet 5.5'], ['fable', 'Fable 5.2'], ['codex', 'GPT-5.6 Luna']], b.engine);
+    opts($('cfgEffort'), EFFORTS, b.effort);
+    $('cfgdlg').showModal();
+  }
+};
+$('cfgSave').onclick = async () => {
+  const next = buttons.map(b => ({ ...b })); next[cfgI] = { skill: $('cfgSkill').value, engine: $('cfgEngine').value, effort: $('cfgEffort').value };
+  buttons = (await api('/api/config', { buttons: next })).buttons; armed = null; drawSkills(); $('cfgdlg').close();
+};
+document.addEventListener('click', e => { if (e.target.closest('[data-close]')) e.target.closest('dialog').close(); });
+
+// ---- header controls ----
+function drawEngine() { document.querySelectorAll('[data-engine]').forEach(b => b.setAttribute('aria-pressed', b.dataset.engine === engine)); }
+document.querySelectorAll('[data-engine]').forEach(b => b.onclick = () => { engine = localStorage.engine = b.dataset.engine; drawEngine(); });
+opts($('effort'), EFFORTS, effort); $('effort').onchange = e => { effort = localStorage.effort = e.target.value; };
+function drawVoice() { $('voice').setAttribute('aria-pressed', voice); $('voice').textContent = voice ? 'Voice on' : 'Voice off'; }
+$('voice').onclick = () => { voice = !voice; localStorage.voice = voice ? 'on' : 'off'; if (!voice) hush(); drawVoice(); };
+$('new').onclick = () => { openSession(null); $('input').focus(); };
+setInterval(() => $('clock').textContent = new Date().toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }), 1000);
+
+// ---- side panels ----
+const ago = t => { const m = (Date.now() - t) / 6e4; return m < 1 ? 'just now' : m < 60 ? `${m | 0} min ago` : m < 1440 ? `${m / 60 | 0} h ago` : `${m / 1440 | 0} d ago`; };
+async function drawSessions() {
+  const { sessions, running } = await api('/api/state');
+  runningIds.clear(); running.forEach(id => runningIds.add(id)); titles = Object.fromEntries(sessions.map(s => [s.id, s.title]));
+  $('sessions').innerHTML = sessions.filter(s => s.title).map(s => `<div class="row ${s.id === current ? 'on' : ''}"><button data-open="${s.id}" style="flex:1;min-width:0;text-align:left"><b>${runningIds.has(s.id) ? '<i class="dot" title="Working"></i>' : ''}${esc(s.title)}</b><span>${ago(s.updated)}, ${s.count} messages</span></button><button class="x" data-del="${s.id}" aria-label="Delete session">✕</button></div>`).join('') || '<p class="empty">Nothing yet. Say something and it is kept here.</p>';
+}
+$('sessions').onclick = async e => {
+  const o = e.target.closest('[data-open]'), d = e.target.closest('[data-del]');
+  if (o) openSession(o.dataset.open);
+  if (d && confirm('Delete this session for good?')) { await fetch('/api/sessions/' + d.dataset.del, { method: 'DELETE' }); d.dataset.del === current ? openSession(null) : drawSessions(); }
+};
+function drawWorld(w) {
+  world = w; const now = Date.now();
+  $('notes').textContent = w.vault.notes ? w.vault.notes + ' notes' : '';
+  $('recent').innerHTML = w.vault.recent.map(n => `<button class="row" data-ask="Open ${esc(n.path)} in my vault and tell me what matters in it."><b>${esc(n.path.split('/').pop().replace(/\.md$/, ''))}</b><span>${esc(n.path.split('/').slice(0, -1).join('/') || 'root')}, ${ago(n.mtime)}</span></button>`).join('') || '<p class="empty">Vault not found.</p>';
+  const up = w.events.find(e => !e.allDay && new Date(e.start) > now);
+  $('next').textContent = up ? 'next in ' + (m => m < 60 ? m + ' min' : (m / 60).toFixed(1) + ' h')(Math.round((new Date(up.start) - now) / 6e4)) : '';
+  $('events').innerHTML = w.events.map(e => { const s = new Date(e.start), en = new Date(e.end); return `<button class="row ${en < now ? 'past' : s <= now ? 'now' : ''}" data-ask="Prep me for &quot;${esc(e.title)}&quot; at ${hhmm(s)}: who, what it is about, and anything relevant in my vault or inbox."><b>${esc(e.title)}</b><span>${e.allDay ? 'All day' : s.toLocaleDateString([], { weekday: 'short' }) + ' ' + hhmm(s) + ' to ' + hhmm(en)}</span></button>`; }).join('') || `<p class="empty">${w.ok.gws ? 'Nothing on the calendar.' : 'Calendar unavailable. Check that gws is signed in.'}</p>`;
+  $('unread').textContent = w.unread ? '~' + w.unread : '';
+  $('mails').innerHTML = w.mails.map(m => `<button class="row" data-ask="Read the email from ${esc(m.from)} titled &quot;${esc(m.subject)}&quot; (id ${m.id}), tell me what they want, and draft a reply. Do not send it."><b>${esc(m.from)}</b><span>${esc(m.subject)}</span></button>`).join('') || `<p class="empty">${w.ok.gws ? 'Inbox is clear.' : 'Mail unavailable. Check that gws is signed in.'}</p>`;
+}
+// Everything on screen is a handle: click a note, meeting or email to hand it to the agent.
+document.addEventListener('click', e => { const a = e.target.closest('[data-ask]'); if (a) prefill(a.dataset.ask); });
+
+// ---- the desk: what is waiting on you, what failed, and how the business is doing ----
+const SEND = { email: 'Send', proposal: 'Send', gws: 'Approve', hands: 'Allow', shell: 'Run it' }, KIND = { email: 'Email draft', proposal: 'Proposal draft', gws: 'Google change', hands: 'Mouse and keyboard', shell: 'Shell command' };
+function drawDesk(d) {
+  desk = d; const q = d.queue, b = d.business;
+  $('qn').textContent = q.length || ''; $('waitp').classList.toggle('has', !!q.length);
+  $('queue').innerHTML = q.map(i => `<div class="card"><b>${esc(i.title)}</b><span class="sub">${KIND[i.kind]}${titles[i.session] ? ' from “' + esc(titles[i.session].slice(0, 40)) + '”' : ''}, ${ago(i.created)}</span>${i.detail ? `<pre>${esc(i.detail.slice(0, 400))}</pre>` : ''}
+    <div class="acts">${i.status === 'sending' ? '<span class="sub">Sending…</span>' : `<button class="btn go" data-ok="${i.id}">${SEND[i.kind]}</button>${i.blocking ? '' : `<button class="btn" data-review="${i.id}">Review${i.kind === 'gws' ? '' : ' and edit'}</button>`}<button class="btn no" data-no="${i.id}">${i.blocking ? 'Deny' : 'Discard'}</button>`}</div></div>`).join('')
+    || '<p class="empty">Nothing is waiting. Drafts and anything that would send or change something land here first.</p>';
+  $('alerts').innerHTML = d.alerts.map(a => `<div class="alert"><div><b>${esc(a.what)}</b><span>${esc(a.detail)}</span></div>${a.session && titles[a.session] != null ? `<button class="btn" data-open="${a.session}">Open</button>` : ''}<button class="btn" data-dismiss="${a.id}">Dismiss</button></div>`).join('');
+  if (b) {
+    $('bLeads').textContent = b.leads.total; $('bProps').textContent = b.proposals; $('bCost').textContent = usd(b.today.usd);
+    const max = Math.max(...b.days.map(x => x.usd), .01);
+    $('bars').innerHTML = b.days.map(x => `<i style="height:${Math.max(4, x.usd / max * 100)}%" title="${new Date(x.d + 'T12:00').toLocaleDateString([], { weekday: 'short', day: 'numeric' })}: ${usd(x.usd)}, ${x.runs} runs"></i>`).join('');
+    $('bars').setAttribute('aria-label', 'Cost per day, last 7 days: ' + b.days.map(x => usd(x.usd)).join(', '));
+    $('barcap').textContent = `Cost per day, last 7 days. ${b.today.runs} runs today.`;
+    $('bizList').innerHTML = b.leads.recent.map(l => `<button class="row" data-ask="Write a proposal for ${esc(l.name)}${l.company ? ' at ' + esc(l.company) : ''}, based on what we know about them and my offer in about-shabbir. Queue it as a proposal draft for me to review.${l.contact ? '' : ' Find a contact address first.'}"><b>${esc(l.name)}${l.company ? ', ' + esc(l.company) : ''}</b><span>${esc(l.status)}${l.value_usd ? ', ' + usd(l.value_usd) + ' a month' : ''}${l.fit ? ': ' + esc(l.fit) : ''}</span></button>`).join('')
+      + b.pipeline.map(r => `<button class="row" data-ask="Prep my next move with ${esc(r.account)} from strategy/20k-mrr-pipeline.csv: where things stand, what is owed, and a draft message for me to review."><b>${esc(r.account)}</b><span>${esc(r.status.replace(/_/g, ' '))}: ${esc(r.next)}</span></button>`).join('')
+      || `<button class="row" data-ask="Overnight lead research: find 10 qualified leads for my AI implementation service using my ICP in the vault. Save each one with save_lead including the evidence, then queue a proposal draft for the best three."><b>No leads yet</b><span>Click to set up an overnight research run</span></button>`;
+  }
+  drawAsks(); refresh();
+}
+// An ask that is holding this conversation's run (mouse and keyboard, a shell command) also shows inside the chat,
+// because the Waiting on you panel is hidden in a narrow window. Same buttons, same click, same /api/queue.
+function drawAsks() {
+  const box = live?.querySelector('.asks'); if (!box) return;
+  const asks = desk.queue.filter(i => i.blocking && i.session === current), ids = asks.map(i => i.id).join();
+  if (box.dataset.ids === ids) return; box.dataset.ids = ids;
+  box.innerHTML = asks.map(i => `<div class="card"><b>${esc(i.title)}</b><span class="sub">${KIND[i.kind]}. Fable OS is waiting for your click.</span>${i.detail ? `<pre>${esc(i.detail.slice(0, 400))}</pre>` : ''}<div class="acts"><button class="btn go" data-ok="${i.id}">${SEND[i.kind]}</button><button class="btn no" data-no="${i.id}">Deny</button></div></div>`).join('');
+  if (asks.length) bottom();
+}
+const decide = async (id, approve, edits) => { const r = await api('/api/queue', { id, approve, edits }); if (r.error) toast(r.error.split('\n')[0].slice(0, 140)); };
+let apId = null;
+function review(i) {
+  apId = i.id; $('apTitle').textContent = KIND[i.kind]; const p = i.payload || {};
+  $('apFields').innerHTML = i.kind === 'gws' ? `<p style="margin-bottom:8px">${esc(i.title)}</p><pre>${esc(i.detail)}</pre>`
+    : `<div style="display:grid;gap:8px">${p.replyTo ? `<p class="cap">Reply in the thread of message ${esc(p.replyTo)}</p>` : ''}<label>To <input type="text" id="apTo" value="${esc(p.to)}"></label>${p.replyTo ? '' : `<label>Subject <input type="text" id="apSub" value="${esc(p.subject)}"></label>`}<textarea id="apBody" aria-label="Body">${esc(p.body)}</textarea></div>`;
+  $('apOk').textContent = SEND[i.kind]; $('apdlg').showModal();
+}
+$('apOk').onclick = () => { decide(apId, true, $('apBody') && { to: $('apTo').value, subject: $('apSub')?.value, body: $('apBody').value }); $('apdlg').close(); };
+$('apNo').onclick = () => { decide(apId, false); $('apdlg').close(); };
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-ok],[data-no],[data-review],[data-dismiss]'); if (!t) return;
+  const d = t.dataset;
+  if (d.ok) { t.disabled = true; decide(d.ok, true); }
+  if (d.no) decide(d.no, false);
+  if (d.review) review(desk.queue.find(i => i.id === d.review));
+  if (d.dismiss) api('/api/alerts', { id: d.dismiss });
+});
+$('alerts').onclick = e => { const o = e.target.closest('[data-open]'); if (o) openSession(o.dataset.open); };
+
+// ---- audit log ----
+const LOGC = { run: '#8fc7d4', tool: '#8b90a3', approval: '#d2b47e', fail: '#d27d8f', lead: '#93c9b1', shell: '#d2b47e' };
+const LOGF = { All: () => true, Runs: e => e.kind.startsWith('run'), Approvals: e => /^approval|^shell/.test(e.kind), Failures: e => e.kind === 'fail' || e.ok === false };
+let logFilter = 'All', logOpen = false;
+const logText = e => ({
+  'run.start': () => `${e.model}${e.effort ? ', ' + e.effort + ' effort' : ''}${e.why ? ' (auto: ' + e.why + ')' : ''} started: ${e.text}`,
+  'run.end': () => `${e.model} ${e.ok ? 'finished' : e.stopped ? 'stopped by you' : 'FAILED'} after ${dur(e.ms || 0)}${e.usd != null ? ', ' + usd(e.usd) : ''}${e.tokens ? ', ' + e.tokens.toLocaleString() + ' tokens' : ''}`,
+  improve: () => `Self-improvement ${e.step}${e.sessions ? ': ' + e.sessions + ' sessions' : ''}${e.count != null ? ': ' + e.count + ' suggestions' : ''}${e.picked ? ': ' + e.picked.join('; ') : ''}${e.changed ? ': ' + e.changed.join(', ') : ''}${e.files ? ': ' + e.files.join(', ') : ''}`,
+  tool: () => e.label, home: () => `Home city saved: ${e.place}`, lead: () => `Lead saved: ${e.name} (${e.status})`, shell: () => `$ ${e.command} ${e.ok ? '' : '(failed)'}`, fail: () => `${e.what}${e.detail ? ': ' + e.detail : ''}`,
+  'approval.queued': () => `Waiting on you (${KIND[e.what] || e.what}): ${e.title}`, 'approval.approved': () => `Approved by your click: ${e.title}`,
+  'approval.rejected': () => `${e.by === 'timeout' ? 'Not answered in time, refused' : 'Rejected by your click'}: ${e.title}`, 'approval.executed': () => `${e.ok ? 'Carried out' : 'FAILED'}: ${e.title}${e.ok ? '' : ' ' + e.result}`,
+}[e.kind] || (() => JSON.stringify(e)))();
+function logRow(e) {
+  if (!LOGF[logFilter](e)) return '';
+  const k = e.kind.split('.')[0];
+  return `<div class="${e.kind === 'fail' || e.ok === false ? 'bad' : ''}"><time>${new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time><u style="--c:${LOGC[k] || '#8b90a3'}">${esc(e.kind)}</u><span>${esc(logText(e))}${titles[e.session] ? ` <em>in “${esc(titles[e.session].slice(0, 36))}”</em>` : ''}</span></div>`;
+}
+let logEntries = [];
+function drawLog() {
+  $('logFilters').innerHTML = Object.keys(LOGF).map(f => `<button class="btn" data-f="${f}" aria-pressed="${f === logFilter}">${f}</button>`).join('');
+  $('logrows').innerHTML = [...logEntries].reverse().map(logRow).join('') || '<p class="empty">Nothing logged yet.</p>';
+}
+$('logFilters').onclick = e => { const f = e.target.closest('[data-f]'); if (f) { logFilter = f.dataset.f; drawLog(); } };
+$('logbtn').onclick = async () => { logEntries = (await api('/api/audit')).entries; logOpen = true; drawLog(); $('logdlg').showModal(); };
+$('logdlg').onclose = () => logOpen = false;
+
+// ---- self-improvement: Fable OS reads every session, suggests changes to its own code, and builds the ones you pick ----
+let imp = { status: 'idle' };
+function drawImprove(v) {
+  imp = v; const s = v.status, B = $('impBody'), A = $('impActs'), btn = (t, a, c = '') => `<button class="btn ${c}" data-imp="${a}">${t}</button>`;
+  $('impbtn').innerHTML = (s === 'analysing' || s === 'implementing' ? '<i class="dot"></i>' : '') + 'Improve' + (s === 'suggested' || s === 'ready' ? ' •' : '');
+  const undo = v.undo ? btn('Undo the last applied change', 'undo') : '', spent = v.usd ? ` Spent so far: ${usd(v.usd)}.` : '';
+  if (s === 'analysing' || s === 'implementing') {
+    B.innerHTML = `<p class="spin"><i class="dot"></i>${s === 'analysing' ? `Fable 5.2 is reading your ${v.sessions} sessions and Fable OS's code` : 'Fable 5.2 is building the changes in a staged copy'}</p><p class="cap">${esc(v.step || '')}</p><p class="cap">This can take several minutes. You can close this and keep working; nothing in the running Fable OS changes until you apply it.${spent}</p>`;
+    A.innerHTML = btn('Stop', 'discard', 'no');
+  } else if (s === 'suggested') {
+    B.innerHTML = v.suggestions.length ? `<p>From your ${v.sessions} sessions, these are the changes worth making. Pick the ones to build.</p>` + v.suggestions.map(x => `<label class="sug"><input type="checkbox" value="${esc(x.id)}" ${x.risk === 'high' ? '' : 'checked'}><b>${esc(x.title)}<small class="${x.risk}">${x.risk} risk</small></b><span>${esc(x.why)}</span><span>Seen in your sessions: <q>${esc(x.evidence)}</q></span><span>Touches ${esc(x.files.join(', '))}</span></label>`).join('') + `<p class="cap">${spent}</p>`
+      : '<p>It read every session and found nothing worth changing.</p>';
+    A.innerHTML = btn('Discard', 'discard', 'no') + (v.suggestions.length ? btn('Build the selected changes', 'implement', 'go') : '');
+  } else if (s === 'ready') {
+    const ok = v.checks.ok && v.changed.length;
+    B.innerHTML = `<div class="md">${md(v.summary || '')}</div><p class="${v.checks.ok ? 'cap' : 'bad'}">${esc(v.checks.out)}</p>
+      <p class="cap">Changed files: ${esc(v.changed.join(', ') || 'none')}.${spent}</p>
+      ${v.sensitive.length ? `<p class="warn">This touches ${esc(v.sensitive.join(', '))}, where approvals and the tests live. Read those parts of the diff before applying.</p>` : ''}
+      <pre class="diff">${esc(v.diff || '')}</pre>`;
+    A.innerHTML = btn('Discard', 'discard', 'no') + (ok ? btn('Apply and restart Fable OS', 'apply', 'go') : '');
+  } else if (s === 'failed') {
+    B.innerHTML = `<p class="bad">${esc(v.error || 'It failed.')}</p>`; A.innerHTML = undo + btn('Clear', 'discard');
+  } else {
+    B.innerHTML = `${s === 'applied' ? `<p>The last set of changes was applied ${ago(v.applied)}: ${esc((v.changed || []).join(', '))}.</p>` : ''}<p>Fable OS reads every session you have had with it, plus its failure log, and suggests changes to its own code. You pick which to build. Fable 5.2 builds them in a staged copy, the checks run, and you see the diff. The running Fable OS only changes when you click Apply, and the previous files are kept so you can undo.</p><p class="cap">Uses Fable 5.2 at high effort, so a pass typically costs a few dollars.</p>`;
+    A.innerHTML = undo + btn('Review my sessions and suggest changes', 'start', 'go');
+  }
+}
+$('impbtn').onclick = () => $('impdlg').showModal();
+$('impdlg').onclick = async e => {
+  const b = e.target.closest('[data-imp]'); if (!b) return;
+  const a = b.dataset.imp, ids = [...document.querySelectorAll('.sug input:checked')].map(i => i.value);
+  if (a === 'apply' && !confirm('Replace Fable OS\'s running code with these changes and restart it?')) return;
+  if (a === 'undo' && !confirm('Put back the files from before the last applied change and restart Fable OS?')) return;
+  b.disabled = true;
+  const r = await api('/api/improve', { action: a, ids });
+  if (r.error) { b.disabled = false; return toast(r.error); }
+  if (r.restart) { $('impBody').innerHTML = '<p class="spin"><i class="dot"></i>Restarting Fable OS</p>'; $('impActs').innerHTML = ''; const t = setInterval(async () => { try { await fetch('/api/state'); clearInterval(t); location.reload(); } catch {} }, 1500); }
+};
+
+// ---- token usage: per model, in total and per session ----
+$('usebtn').onclick = async () => {
+  const u = await api('/api/usage'), full = n => n.toLocaleString();
+  const row = (name, x, cls = '') => `<tr class="${cls}"><td class="${cls ? '' : 'm'}">${esc(name)}</td><td>${x.runs}</td><td>${x.in + x.cached + x.out ? full(x.in) : '–'}</td><td>${x.in + x.cached + x.out ? full(x.cached) : '–'}</td><td>${x.in + x.cached + x.out ? full(x.out) : '–'}</td><td>${full(x.tokens)}</td><td>${x.usd ? usd(x.usd) : '–'}</td></tr>`;
+  const sum = ms => Object.values(ms).reduce((a, x) => { for (const k in a) a[k] += x[k]; return a; }, { runs: 0, in: 0, cached: 0, out: 0, tokens: 0, usd: 0 });
+  const block = ms => Object.entries(ms).sort((a, b) => b[1].tokens - a[1].tokens).map(([m, x]) => row(m, x)).join('');
+  $('userows').innerHTML = Object.keys(u.total).length ? `<table><tr><th>Model</th><th>Runs</th><th>Input</th><th>Cached</th><th>Output</th><th>Total tokens</th><th>Cost</th></tr>
+    <tr class="sess"><td colspan="7">All sessions</td></tr>${block(u.total)}${row('Total', sum(u.total), 'sum')}
+    ${u.sessions.map(s => `<tr class="sess"><td colspan="7">${esc(s.session === 'self-improve' ? 'Self-improvement' : titles[s.session] || 'Deleted session')}<em>${ago(s.last)}</em></td></tr>${block(s.models)}${Object.keys(s.models).length > 1 ? row('Session total', sum(s.models), 'sum') : ''}`).join('')}</table>`
+    : '<p class="empty">No runs logged yet.</p>';
+  $('usedlg').showModal();
+};
+
+const SRC = { vault: '#d2b47e', mail: '#d27d8f', calendar: '#a09ccf', agent: '#8fc7d4', system: '#8b90a3', alert: '#d27d8f', approval: '#d2b47e', lead: '#93c9b1' };
+let spikes = [];
+function addPulse(e, quiet) {
+  const d = document.createElement('div'); d.style.setProperty('--c', SRC[e.src] || SRC.system);
+  d.innerHTML = `<time>${hhmm(e.t)}</time><i></i><span>${esc(e.text)}</span>`;
+  $('feed').prepend(d); while ($('feed').children.length > 40) $('feed').lastChild.remove();
+  if (!quiet) spikes.push({ age: 0, c: SRC[e.src] || SRC.system });
+}
+
+// ---- live stream ----
+function connect() {
+  const es = new EventSource('/api/stream');
+  es.onmessage = m => {
+    const e = JSON.parse(m.data), mine = e.sessionId === current && live;
+    if (e.type === 'pulse') addPulse(e);
+    if (e.type === 'world') drawWorld(e.world);
+    if (e.type === 'desk') drawDesk(e.desk);
+    if (e.type === 'improve') drawImprove(e.improve);
+    if (e.type === 'audit' && logOpen) { logEntries.push(e.entry); drawLog(); }
+    if (e.type === 'note' && e.sessionId === current) bubble(e.message);
+    if (e.type === 'vitals') {
+      cpu = e.cpu; $('vCpu').textContent = Math.round(e.cpu * 100) + '%'; $('bCpu').style.width = e.cpu * 100 + '%';
+      $('vMem').textContent = Math.round(e.mem * 100) + '%'; $('bMem').style.width = e.mem * 100 + '%';
+      $('vAg').textContent = e.agents; $('bAg').style.width = Math.min(100, e.agents * 34) + '%';
+    }
+    if (mine && e.type === 'delta') { live.text += e.text; live.querySelector('.md').innerHTML = md(live.text); bottom(); }
+    if (mine && e.type === 'tool') { acting = e.acting; const t = live.querySelector('.trace'); t.hidden = false; t.insertAdjacentHTML('beforeend', `<div>${esc(e.label)}</div>`); refresh(); bottom(); }
+    if (mine && e.type === 'vision') { const t = live.querySelector('.trace'); t.hidden = false; t.insertAdjacentHTML('beforeend', `<img src="${e.url}" alt="What Fable OS sees on your screen">`); bottom(); }
+    if (mine && e.type === 'speak') { live.querySelector('.saidbox').insertAdjacentHTML('beforeend', `<div class="said">${esc(e.text)}</div>`); if (e.url && voice) { queue.push(e.url); playNext(); } bottom(); }
+    if (e.type === 'done') runningIds.delete(e.sessionId);
+    if (e.type === 'done' && e.sessionId === current) {
+      if (live) { live.querySelector('.md').classList.remove('cursor'); live.querySelector('.md').innerHTML = md(e.message.text); live.querySelector('.who').innerHTML = who(e.message); }
+      live = null; busy = false; acting = false; refresh(); bottom();
+    }
+    if (e.type === 'done') drawSessions();
+  };
+}
+
+// ---- the orb: a particle sphere that breathes with whoever is talking ----
+const orb = $('orb'), ox = orb.getContext('2d'), N = 1500, pts = [];
+for (let i = 0; i < N; i++) { const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), th = i * 2.399963; pts.push({ x: Math.cos(th) * r, y, z: Math.sin(th) * r, sx: (Math.random() - .5) * 9, sy: (Math.random() - .5) * 6, sz: (Math.random() - .5) * 9, ph: Math.random() * 6.283 }); }
+let hue = 196, lvl = 0, rot = 0, energy = 0, cpu = 0;
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now();
+function fit(c) { const d = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight; if (c.width !== w * d || c.height !== h * d) { c.width = w * d; c.height = h * d; } return [w * d, h * d, d]; }
+function drawOrb(now) {
+  const [w, h, d] = fit(orb), t = (now - t0) / 1000, boot = still ? 1 : 1 - Math.pow(1 - Math.min(1, t / 2.2), 4);
+  const want = STATES[state].hue; hue += (((want - hue + 540) % 360) - 180) * .06;
+  lvl += (level() - lvl) * .3; energy += ((state === 'thinking' || state === 'acting' ? 1 : 0) - energy) * .05;
+  rot += still ? 0 : .0025 + energy * .012 + lvl * .01;
+  const R = Math.min(w, h * .92) * .44, cx = w / 2, cy = h * .47, cs = Math.cos(rot), sn = Math.sin(rot);
+  ox.clearRect(0, 0, w, h); ox.globalCompositeOperation = 'source-over';
+  const g = ox.createRadialGradient(cx, cy, 0, cx, cy, R * 1.5);
+  g.addColorStop(0, `hsla(${hue},45%,62%,${.10 + lvl * .25})`); g.addColorStop(.45, `hsla(${hue + 20},40%,50%,.04)`); g.addColorStop(1, 'transparent');
+  ox.fillStyle = g; ox.fillRect(0, 0, w, h);
+  // three orbital rings, tilted, drifting at different speeds
+  ox.lineWidth = d;
+  for (let i = 0; i < 3; i++) {
+    ox.strokeStyle = `hsla(${hue + i * 14},38%,74%,${(.22 - i * .05) * boot})`;
+    ox.setLineDash([R * (.5 + i * .3), R * (.12 + i * .1)]); ox.lineDashOffset = -t * R * (.25 + i * .12) * (i % 2 ? -1 : 1) * (1 + energy * 3);
+    ox.beginPath(); ox.ellipse(cx, cy, R * (1.12 + i * .13 + lvl * .12), R * (.3 + i * .09), -.42 + i * .5 + Math.sin(t * .2 + i) * .06, 0, 6.2832); ox.stroke();
+  }
+  ox.setLineDash([]);
+  for (const p of pts) {
+    const wave = Math.sin(p.y * 4 + t * 1.3 + p.ph * .3) * .5 + Math.sin(p.x * 5 - t * 1.7) * .5;
+    const k = 1 + wave * (.035 + energy * .09) + lvl * .42 * Math.abs(Math.sin(p.ph + t * 5));
+    let x = p.x * k, y = p.y * k, z = p.z * k;
+    x += (p.sx - x) * (1 - boot); y += (p.sy - y) * (1 - boot); z += (p.sz - z) * (1 - boot);
+    const X = x * cs + z * sn, Z = z * cs - x * sn, Y = y * .94 + Z * .34, Zt = Z * .94 - y * .34, f = 1 / (2.3 - Zt * .55), s = (1.1 + Zt * .6 + lvl) * d * 1.5;
+    ox.fillStyle = `hsla(${hue + p.y * 18 + wave * 14},46%,${68 + Zt * 12}%,${(.18 + .72 * (Zt + 1) / 2) * boot})`;
+    ox.fillRect(cx + X * R * f * 2.05, cy + Y * R * f * 2.05, s, s);
+  }
+  requestAnimationFrame(drawOrb);
+}
+
+// ---- pulse line: a heartbeat that quickens with load and kicks on every event ----
+const ecg = $('ecg'), ex = ecg.getContext('2d'); let samples = [], phase = 0;
+function drawEcg() {
+  const [w, h, d] = fit(ecg), bpm = 52 + cpu * 70 + (busy ? 28 : 0); phase += bpm / 3600; $('beat').textContent = Math.round(bpm) + ' bpm';
+  const b = phase % 1; let v = b < .04 ? -b * 4 : b < .08 ? (b - .04) * 26 - .16 : b < .13 ? .88 - (b - .08) * 24 : b < .17 ? -.32 + (b - .13) * 8 : b > .3 && b < .42 ? Math.sin((b - .3) / .12 * Math.PI) * .13 : 0;
+  let tint = null;
+  spikes = spikes.filter(s => s.age < 50); for (const s of spikes) { v += Math.sin(s.age * .9) * Math.exp(-s.age * .09) * .85; if (s.age < 30) tint = s.c; s.age++; }
+  samples.push({ v, tint }); const step = 2 * d, max = Math.ceil(w / step); if (samples.length > max) samples = samples.slice(-max);
+  ex.clearRect(0, 0, w, h); ex.lineWidth = 1.6 * d; ex.lineJoin = 'round'; ex.shadowBlur = 0;
+  for (let i = 1; i < samples.length; i++) {
+    const c = samples[i].tint || '#8fc7d4'; ex.strokeStyle = ex.shadowColor = c; ex.globalAlpha = .15 + .85 * i / samples.length;
+    ex.beginPath(); ex.moveTo((i - 1) * step, h * .58 - samples[i - 1].v * h * .4); ex.lineTo(i * step, h * .58 - samples[i].v * h * .4); ex.stroke();
+  }
+  if (!still) requestAnimationFrame(drawEcg);
+}
+
+// ---- boot ----
+(async () => {
+  drawEngine(); drawVoice(); refresh(); requestAnimationFrame(drawOrb); drawEcg();
+  const s = await api('/api/state'); drawWorld(s.world); s.feed.forEach(e => addPulse(e, true));
+  skills = s.skills; buttons = s.config.buttons; titles = Object.fromEntries(s.sessions.map(x => [x.id, x.title])); drawSkills(); drawDesk(s.desk); drawImprove(s.improve);
+  if (!s.voice) toast('No ElevenLabs key found in .env.local, so voice is off.');
+  await openSession(current); connect();
+})();
+</script>
+</body>
+</html>
